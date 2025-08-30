@@ -1,23 +1,18 @@
-// src/app/merge-pdf/page.js
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PDFDocument } from "pdf-lib";
 
-// Import your custom hooks
+// Import your custom hook
 import { useCloudPickers } from '@/hooks/useCloudPickers';
-import { useLocalStorage } from '@/hooks/useLocalStorage'; // <-- Import useLocalStorage hook
 
 // Import the new reusable component
 import PdfToolUploader from '@/components/PdfToolUploader';
 
 
+
 export default function MergePDF() {
   const [localFiles, setLocalFiles] = useState([]);
-  
-  // --- USE LOCALSTORAGE HOOK FOR mergedPdfUrl ---
-  // Key 'mergePdfUrl' unique honi chahiye har tool ke liye
-  const [mergedPdfUrl, setMergedPdfUrl] = useLocalStorage('mergePdfUrl', null); 
-  // --- END USE LOCALSTORAGE HOOK ---
+  const [mergedPdfUrl, setMergedPdfUrl] = useState(null);
   
   // Ab fileInputRef PdfToolUploader ko pass kiya jayega
   const fileInputRef = useRef(null); 
@@ -45,18 +40,17 @@ export default function MergePDF() {
   // --- MODIFIED useEffect for managing mergedPdfUrl and clearPickedCloudFiles ---
   // Ye effect ab bhi yahan rahega, kyunki ye mergedPdfUrl aur overall file state ko manage karta hai.
   useEffect(() => {
-    // Ye line mergedPdfUrl ko null kar degi agar allFiles.length change hota hai
-    // isko ab conditionally check karna hoga, kyunki mergedPdfUrl ab localStorage se load ho raha hai
     if (allFiles.length !== prevAllFilesLengthRef.current) {
-      // Jab files change hon, toh mergedPdfUrl ko reset karna chahiye (localStorage mein bhi)
-      setMergedPdfUrl(null); 
+      if (mergedPdfUrl) {
+        setMergedPdfUrl(null);
+      }
       
       if (prevAllFilesLengthRef.current > 0 && allFiles.length === 0) {
         clearPickedCloudFiles();
       }
     }
     prevAllFilesLengthRef.current = allFiles.length;
-  }, [allFiles.length, clearPickedCloudFiles, setMergedPdfUrl]); // setMergedPdfUrl bhi dependency mein
+  }, [allFiles.length, mergedPdfUrl, clearPickedCloudFiles]);
 
 
   // --- File Handling Functions ---
@@ -68,8 +62,7 @@ export default function MergePDF() {
       const cloudFileIndex = indexToRemove - localFiles.length;
       setPickedCloudFiles(prevFiles => prevFiles.filter((_, index) => index !== cloudFileIndex));
     }
-    setMergedPdfUrl(null); // File remove hone par merged URL reset
-  }, [localFiles, pickedCloudFiles, setPickedCloudFiles, setMergedPdfUrl]);
+  }, [localFiles, pickedCloudFiles, setPickedCloudFiles]);
 
   const handleMerge = async () => {
     if (allFiles.length < 2) {
@@ -102,7 +95,7 @@ export default function MergePDF() {
     const mergedPdfBytes = await mergedPdf.save();
     const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
-    setMergedPdfUrl(url); // Ye url localStorage mein save ho jayega via useLocalStorage hook
+    setMergedPdfUrl(url);
     if (mergeErrors) {
         alert("Some files could not be merged due to errors. The merged PDF contains only the successfully processed files.");
     }
@@ -111,11 +104,11 @@ export default function MergePDF() {
   const clearAllFiles = useCallback(() => {
     setLocalFiles([]);
     clearPickedCloudFiles();
-    setMergedPdfUrl(null); // Clear mergedPdfUrl state and localStorage
+    setMergedPdfUrl(null);
     if (fileInputRef.current) {
         fileInputRef.current.value = null;
     }
-  }, [clearPickedCloudFiles, setMergedPdfUrl]); // setMergedPdfUrl bhi dependency mein
+  }, [clearPickedCloudFiles]);
 
   return (
     <PdfToolUploader
@@ -127,8 +120,8 @@ export default function MergePDF() {
       setLocalFiles={setLocalFiles}
       allFiles={allFiles}
       removeFile={removeFile}
-      clearAllFiles={clearAllFiles}
-      fileInputRef={fileInputRef}
+      clearAllFiles={clearAllFiles} // clearAllFiles ko bhi pass karna hai
+      fileInputRef={fileInputRef} // fileInputRef bhi pass kiya
 
       // Cloud picker props
       isPickerLoading={isPickerLoading}
@@ -158,8 +151,6 @@ export default function MergePDF() {
         mergedPdfUrl && (
           <div className="mt-8 p-4 border rounded-lg bg-green-50 shadow-inner">
             <h2 className="font-bold text-xl text-green-700 mb-3">✅ Merged PDF is ready!</h2>
-            {/* Note: URL.createObjectURL() based URLs will expire on page reload. 
-                Downloading will only work if the original blob is somehow recreated or persisted */}
             <iframe
               src={mergedPdfUrl}
               width="100%"

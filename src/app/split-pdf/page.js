@@ -2,18 +2,17 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PDFDocument } from "pdf-lib";
-import dynamic from "next/dynamic";
+import dynamic from "next/dynamic"; // Iski ab yahan zaroorat nahi kyunki Document/Page PdfToolUploader mein dynamic hain.
 import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 // Import your custom hook
 import { useCloudPickers } from '@/hooks/useCloudPickers';
-// Import the new useLocalStorage hook
-import { useLocalStorage } from '@/hooks/useLocalStorage'; // <-- Naya import
 
 // Import the reusable component
 import PdfToolUploader from '@/components/PdfToolUploader';
 
-// Dynamically import react-pdf components (for toolSpecificContent previews)
+// Dynamically import react-pdf components inside this reusable component
+// This ensures that Document and Page are only loaded on the client-side
 const Document = dynamic(
   () => import("react-pdf").then((mod) => mod.Document),
   { ssr: false }
@@ -23,18 +22,17 @@ const Page = dynamic(
   { ssr: false }
 );
 
+
 export default function SplitPDF() {
   const [localFiles, setLocalFiles] = useState([]);
-  const [splitPdfUrls, setSplitPdfUrls] = useState([]);
-  const [numPagesInPdf, setNumPagesInPdf] = useState(0);
-  
-  // --- USE NEW LOCALSTORAGE HOOK ---
-  const [pagesToSplit, setPagesToSplit] = useLocalStorage('splitPdfPagesToSplit', ""); // <-- useLocalStorage hook use kiya
-  // --- END NEW LOCALSTORAGE HOOK ---
+  const [splitPdfUrls, setSplitPdfUrls] = useState([]); // Array to hold URLs of split PDFs
+  const [pagesToSplit, setPagesToSplit] = useState(""); // Input for page ranges (e.g., "1-3, 5, 8-10")
+  const [numPagesInPdf, setNumPagesInPdf] = useState(0); // To store total pages of the uploaded PDF
   
   const fileInputRef = useRef(null); 
 
 
+  // Hook for cloud pickers
   const {
     isPickerLoading,
     pickedCloudFiles,
@@ -47,29 +45,20 @@ export default function SplitPDF() {
 
   const allFiles = [...localFiles, ...pickedCloudFiles];
 
+  // Ref to track previous allFiles length to detect a change for clearing splitPdfUrls
   const prevAllFilesLengthRef = useRef(allFiles.length);
-
-  // --- PDF.JS WORKER CONFIG (Should run only once on client-side) ---
-  useEffect(() => {
-    const configurePdfJs = async () => {
-      const { pdfjs } = await import('react-pdf');
-      pdfjs.GlobalWorkerOptions.workerSrc = `/pdf/pdf.worker.min.js`;
-    };
-    configurePdfJs();
-  }, []);
-  // --- END OF PDF.JS WORKER CONFIG ---
-
 
   // --- MODIFIED useEffect for managing splitPdfUrls and clearPickedCloudFiles ---
   useEffect(() => {
     if (allFiles.length !== prevAllFilesLengthRef.current) {
+      // Clear split PDFs if input files change
       if (splitPdfUrls.length > 0) {
         setSplitPdfUrls([]);
       }
       
+      // Reset numPagesInPdf if files are cleared or changed
       setNumPagesInPdf(0);
-      // pagesToSplit ko ab useLocalStorage hook manage karega, yahan clear karne ki zaroorat nahi.
-      // setPagesToSplit(""); 
+      setPagesToSplit(""); // Also clear page input
 
       if (prevAllFilesLengthRef.current > 0 && allFiles.length === 0) {
         clearPickedCloudFiles();
@@ -77,15 +66,6 @@ export default function SplitPDF() {
     }
     prevAllFilesLengthRef.current = allFiles.length;
   }, [allFiles.length, splitPdfUrls, clearPickedCloudFiles]);
-
-  // pagesToSplit ko localStorage mein save karne wala useEffect ab useLocalStorage hook ke andar hai,
-  // isliye yahan ab iski zaroorat nahi.
-  // useEffect(() => {
-  //   if (typeof window !== 'undefined') {
-  //     localStorage.setItem('splitPdfPagesToSplit', pagesToSplit);
-  //   }
-  // }, [pagesToSplit]);
-
 
   // Effect to get total pages of uploaded PDF
   useEffect(() => {
@@ -101,13 +81,14 @@ export default function SplitPDF() {
         }
       } else {
         setNumPagesInPdf(0);
-        // setPagesToSplit(""); // Don't clear from here
+        setPagesToSplit(""); // Clear page input if no file or multiple files
       }
     };
     loadPdfInfo();
-  }, [allFiles]);
+  }, [allFiles]); // Run when allFiles changes
 
 
+  // --- File Handling Functions ---
   const removeFile = useCallback((indexToRemove) => {
     if (indexToRemove < localFiles.length) {
       setLocalFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
@@ -115,9 +96,10 @@ export default function SplitPDF() {
       const cloudFileIndex = indexToRemove - localFiles.length;
       setPickedCloudFiles(prevFiles => prevFiles.filter((_, index) => index !== cloudFileIndex));
     }
+    // Clear split PDFs when a file is removed
     setSplitPdfUrls([]);
-    setNumPagesInPdf(0);
-    // setPagesToSplit(""); // Don't clear from here
+    setNumPagesInPdf(0); // Reset page count
+    setPagesToSplit(""); // Clear page input
   }, [localFiles, pickedCloudFiles, setPickedCloudFiles]);
 
   const handleSplit = async () => {
@@ -135,13 +117,14 @@ export default function SplitPDF() {
     }
 
     const inputPdfFile = allFiles[0];
-    setSplitPdfUrls([]);
+    setSplitPdfUrls([]); // Clear previous split results
 
     try {
       const arrayBuffer = await inputPdfFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const numPages = pdfDoc.getPageCount();
 
+      // Parse page ranges (e.g., "1-3, 5, 8-10")
       const pagesToExtractGroups = parsePageRanges(pagesToSplit, numPages);
 
       if (pagesToExtractGroups.length === 0) {
@@ -153,7 +136,7 @@ export default function SplitPDF() {
 
       for (const pageNumbers of pagesToExtractGroups) {
         const newPdf = await PDFDocument.create();
-        const copiedPages = await newPdf.copyPages(pdfDoc, pageNumbers.map(p => p - 1));
+        const copiedPages = await newPdf.copyPages(pdfDoc, pageNumbers.map(p => p - 1)); // Adjust to 0-indexed
 
         copiedPages.forEach((page) => newPdf.addPage(page));
 
@@ -175,6 +158,7 @@ export default function SplitPDF() {
     }
   };
 
+  // Helper function to parse page ranges
   const parsePageRanges = (rangeString, totalPages) => {
     const pages = [];
     const parts = rangeString.split(',').map(part => part.trim()).filter(Boolean);
@@ -198,6 +182,7 @@ export default function SplitPDF() {
             if (!pages.includes(pageNum)) pages.push(pageNum);
         }
     }
+    // Sort and remove duplicates
     const sortedUniquePages = [...new Set(pages)].sort((a,b) => a - b);
     const contiguousPageGroups = [];
     if (sortedUniquePages.length === 0) return [];
@@ -211,7 +196,7 @@ export default function SplitPDF() {
             currentGroup = [sortedUniquePages[i]];
         }
     }
-    contiguousPageGroups.push(currentGroup);
+    contiguousPageGroups.push(currentGroup); // Add the last group
 
     return contiguousPageGroups;
   };
@@ -220,16 +205,17 @@ export default function SplitPDF() {
   const clearAllFiles = useCallback(() => {
     setLocalFiles([]);
     clearPickedCloudFiles();
-    setSplitPdfUrls([]);
-    setPagesToSplit(""); // Still clear here to explicitly reset the input field and localStorage
-    setNumPagesInPdf(0);
-  }, [clearPickedCloudFiles, setPagesToSplit]); // setPagesToSplit added to dependency array
+    setSplitPdfUrls([]); // Clear split URLs as well
+    setPagesToSplit(""); // Clear page input
+    setNumPagesInPdf(0); // Reset page count
+  }, [clearPickedCloudFiles]);
 
   return (
     <PdfToolUploader
       title="Split PDF"
       subtitle="Separate one page or a whole set for easy conversion into independent PDF files."
       
+      // File management props
       localFiles={localFiles}
       setLocalFiles={setLocalFiles}
       allFiles={allFiles}
@@ -237,13 +223,15 @@ export default function SplitPDF() {
       clearAllFiles={clearAllFiles}
       fileInputRef={fileInputRef}
 
+      // Cloud picker props
       isPickerLoading={isPickerLoading}
       cloudPickerError={cloudPickerError}
       openGoogleDrivePicker={openGoogleDrivePicker}
       openDropboxChooser={openDropboxChooser}
       
+      // Tool-specific action buttons
       actionButtons={
-        allFiles.length === 1 && numPagesInPdf > 0 && (
+        allFiles.length === 1 && numPagesInPdf > 0 && ( // Only show action buttons if one PDF is uploaded and pages are known
           <>
             <div className="flex flex-col items-center gap-2">
               <label htmlFor="pagesToSplit" className="text-gray-700 font-medium">Pages to Split (e.g., 1-3, 5):</label>
@@ -271,59 +259,41 @@ export default function SplitPDF() {
           </>
         )
       }
+      // Tool-specific content (e.g., split PDF previews)
       toolSpecificContent={
         splitPdfUrls.length > 0 && (
           <div className="mt-8 p-4 border rounded-lg bg-yellow-50 shadow-inner">
             <h2 className="font-bold text-xl text-yellow-700 mb-3">✅ Your PDF has been split!</h2>
-            <div className="flex flex-wrap justify-center gap-6">
+            <div className="flex flex-wrap justify-center gap-6"> {/* Changed to flex-wrap for better layout */}
                 {splitPdfUrls.map((splitFile, idx) => (
                     <div key={idx} className="border p-3 rounded-lg shadow-sm flex flex-col items-center bg-white">
-                        <p className="text-gray-800 font-semibold mb-2">Range {idx + 1}</p>
-                        <div className="flex items-center justify-center gap-2 mb-2 w-full">
+                        <p className="text-gray-800 font-semibold mb-2">Range {idx + 1}</p> {/* Range label */}
+                        <div className="flex items-center gap-2 mb-2">
+                            {/* Preview for the first page of the split range */}
                             {allFiles[0] && Document && Page && (
-                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                                    <Document 
-                                      file={allFiles[0]} 
-                                      className="w-full h-full"
-                                      loading={<span className="text-sm text-gray-500">Loading...</span>}
-                                      error={<span className="text-sm text-red-500 text-center p-1">Failed to load PDF</span>}
-                                    >
+                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <Document file={allFiles[0]} className="w-full h-full">
                                         <Page pageNumber={splitFile.pages[0]} width={100} renderTextLayer={false} renderAnnotationLayer={false} />
                                     </Document>
+                                    <p className="text-xs text-gray-500 text-center mt-1">{splitFile.pages[0]}</p>
                                 </div>
                             )}
 
+                            {/* Ellipsis if more than two pages in range */}
                             {splitFile.pages.length > 2 && <span className="text-xl font-bold text-gray-500 mx-1">...</span>}
 
+                            {/* Preview for the last page of the split range (if different from first) */}
                             {splitFile.pages.length > 1 && allFiles[0] && Document && Page && (
-                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                                    <Document 
-                                      file={allFiles[0]} 
-                                      className="w-full h-full"
-                                      loading={<span className="text-sm text-gray-500">Loading...</span>}
-                                      error={<span className="text-sm text-red-500 text-center p-1">Failed to load PDF</span>}
-                                    >
+                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <Document file={allFiles[0]} className="w-full h-full">
                                         <Page pageNumber={splitFile.pages[splitFile.pages.length - 1]} width={100} renderTextLayer={false} renderAnnotationLayer={false} />
                                     </Document>
+                                    <p className="text-xs text-gray-500 text-center mt-1">{splitFile.pages[splitFile.pages.length - 1]}</p>
                                 </div>
                             )}
                         </div>
-                        <div className="flex justify-center gap-4 text-xs text-gray-500 mt-1">
-                          {allFiles[0] && Document && Page && (
-                            <>
-                              <span>{splitFile.pages[0]}</span>
-                              {splitFile.pages.length > 1 && splitFile.pages.length <= 2 ? (
-                                <span>- {splitFile.pages[splitFile.pages.length - 1]}</span>
-                              ) : splitFile.pages.length > 2 ? (
-                                <>
-                                  <span>...</span>
-                                  <span>{splitFile.pages[splitFile.pages.length - 1]}</span>
-                                </>
-                              ) : null}
-                            </>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 text-center truncate w-full mb-2 mt-2">{splitFile.name}</p>
+
+                        <p className="text-sm text-gray-600 text-center truncate w-full mb-2">{splitFile.name}</p>
                         <a
                             href={splitFile.url}
                             download={splitFile.name}
