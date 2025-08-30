@@ -8,7 +8,6 @@ import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 // Import your custom hook
 import { useCloudPickers } from '@/hooks/useCloudPickers';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 // Import the reusable component
 import PdfToolUploader from '@/components/PdfToolUploader';
