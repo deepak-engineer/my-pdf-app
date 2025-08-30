@@ -1,103 +1,123 @@
-import Image from "next/image";
+import ToolCard from "@/components/ToolCard";
+import {
+  FaFilePdf,
+  FaFileWord,
+  FaFilePowerpoint,
+  FaFileExcel,
+  FaFileImage,
+  FaEdit,
+  FaCompress,
+  FaCrop,
+  FaSortNumericDown,
+} from "react-icons/fa";
 
-export default function Home() {
+export default function HomePage() {
+  const tools = [
+    {
+      title: "Merge PDF",
+      description: "Combine PDFs in the order you want with the easiest PDF merger available.",
+      link: "/merge-pdf",
+      icon: <FaFilePdf />,
+      iconBg: "bg-red-600"
+    },
+    {
+      title: "Split PDF",
+      description: "Separate one page or a whole set for easy conversion into independent PDF files.",
+      link: "/split-pdf",
+      icon: <FaFilePdf />,
+      iconBg: "bg-orange-600"
+    },
+    {
+      title: "Compress PDF",
+      description: "Reduce file size while optimizing for maximal PDF quality.",
+      link: "/compress-pdf",
+      icon: <FaCompress />,
+      iconBg: "bg-green-600"
+    },
+    {
+      title: "PDF ⇄ Word",
+      description: "Easily convert your PDF files into easy to edit DOC and DOCX documents. The converted WORD document is almost 100% accurate.",
+      link: "/pdf-to-word",
+      icon: <FaFileWord />,
+      iconBg: "bg-blue-600"
+    },
+    {
+      title: "Word ⇄ PDF",
+      description: "Make DOC and DOCX files easy to read by converting them to PDF.",
+      link: "/word-to-pdf",
+      icon: <FaFileWord />,
+      iconBg: "bg-blue-600"
+    },
+    {
+      title: "PDF ⇄ PowerPoint",
+      description: "Turn your PDF files into easy to edit PPT and PPTX slideshows.",
+      link: "/pdf-to-ppt",
+      icon: <FaFilePowerpoint />,
+      iconBg: "bg-orange-500"
+    },
+    {
+      title: "Powerpoint ⇄ PDF",
+      description: "Make PPT and PPTX slideshows easy to view by converting them to PDF.",
+      link: "/ppt-to-pdf",
+      icon: <FaFilePowerpoint />,
+      iconBg: "bg-orange-500"
+    },
+    {
+      title: "PDF ⇄ Excel",
+      description: "Pull data straight from PDFs into Excel spreadsheets in a few short seconds.",
+      link: "/pdf-to-excel",
+      icon: <FaFileExcel />,
+      iconBg: "bg-green-500"
+    },
+    {
+      title: "Excel ⇄ PDF",
+      description: "Make EXCEL spreadsheets easy to read by converting them to PDF.",
+      link: "/pdf-to-excel",
+      icon: <FaFileExcel />,
+      iconBg: "bg-green-500"
+    },
+    {
+      title: "Edit PDF",
+      description: "Add text, images, shapes or freehand annotations to a PDF document. Edit the size, font, and color of the added content.",
+      link: "/edit-pdf",
+      icon: <FaEdit />,
+      iconBg: "bg-pink-600"
+    },
+    {
+      title: "PDF ⇄ JPG",
+      description: "Convert each PDF page into a JPG or extract all images contained in a PDF.",
+      link: "/pdf-to-jpg",
+      icon: <FaFileImage />,
+      iconBg: "bg-yellow-600"
+    },
+    {
+      title: "JPG to PDF",
+      description: "Convert JPG images to PDF in seconds. Easily adjust orientation and margins.",
+      link: "/jpg-to-pdf",
+      icon: <FaFileImage />,
+      iconBg: "bg-yellow-500"
+    },
+    {
+      title: "Crop PDF",
+      description: "Crop margins of PDF documents or select specific areas, then apply the changes to one page or the whole document.",
+      link: "/crop-pdf",
+      icon: <FaCrop />,
+      iconBg: "bg-purple-600"
+    },
+    {
+      title: "Page Numbers",
+      description: "• Select position, font, size, color\n• Skip numbering on selected pages",
+      link: "/page-numbers",
+      icon: <FaSortNumericDown />,
+      iconBg: "bg-gray-700"
+    },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+      {tools.map((tool, index) => (
+        <ToolCard key={index} {...tool} />
+      ))}
     </div>
   );
 }
