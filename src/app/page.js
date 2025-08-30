@@ -120,7 +120,7 @@ export default function HomePage() {
         <h1 className="text-4xl sm:text-5xl font-bold text-center mb-8 sm:mb-12">All PDF Tools</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {tools.map((tool, index) => (
-            <ToolCard key={tool.link || index} {...tool} /> {/* Using link as key if available, otherwise index */}
+            <ToolCard key={tool.link || index} {...tool} />
           ))}
         </div>
       </div>
