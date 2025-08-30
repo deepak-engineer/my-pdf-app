@@ -1,7 +1,7 @@
 // src/components/Navbar.js
 "use client";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react"; // Added useRef, useEffect
+import { useState, useRef, useEffect } from "react";
 import {
     FaFileWord,
     FaFileExcel,
@@ -18,9 +18,9 @@ import {
 } from "react-icons/fa";
 
 export default function Navbar() {
-    const [activeDropdown, setActiveDropdown] = useState(null);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
-    const [activeMobileDropdown, setActiveMobileDropdown] = useState(null); // State for mobile dropdowns
+    const [activeDropdown, setActiveDropdown] = useState(null); // For desktop dropdowns
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // For mobile hamburger menu
+    const [activeMobileDropdown, setActiveMobileDropdown] = useState(null); // For mobile dropdowns inside hamburger
     const navRef = useRef(null); // Ref for closing mobile menu on outside click
 
     const menus = {
@@ -79,6 +79,7 @@ export default function Navbar() {
             if (navRef.current && !navRef.current.contains(event.target)) {
                 setIsMobileMenuOpen(false);
                 setActiveMobileDropdown(null);
+                setActiveDropdown(null); // Desktop dropdowns bhi close ho jayenge
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -87,26 +88,40 @@ export default function Navbar() {
         };
     }, [navRef]);
 
+    // Close mobile menu if window is resized to desktop
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 768) { // md breakpoint is 768px
+                setIsMobileMenuOpen(false);
+                setActiveMobileDropdown(null);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
+
 
     return (
-        <nav ref={navRef} className="bg-gray-900 px-6 py-4 flex justify-between items-center relative text-white">
+        <nav ref={navRef} className="bg-gray-900 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative text-white z-50"> {/* z-50 added */}
             {/* LEFT SIDE - Logo */}
             <Link href="/" className="flex items-center flex-shrink-0">
-                <h1 className="text-red-500 font-bold text-xl cursor-pointer">I 🖤 PDF</h1>
+                <h1 className="text-red-500 font-bold text-lg sm:text-xl cursor-pointer">I 🖤 PDF</h1> {/* Responsive font size */}
             </Link>
 
             {/* Hamburger Icon for Mobile */}
-            <div className="md:hidden">
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white text-2xl focus:outline-none">
+            <div className="md:hidden flex items-center"> {/* Added flex items-center for better alignment */}
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white text-xl sm:text-2xl focus:outline-none p-1"> {/* Responsive icon size and padding */}
                     {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
                 </button>
             </div>
 
             {/* MENUS - Desktop */}
-            <div className="hidden md:flex gap-6 items-center">
-                <Link href="/merge-pdf" className="hover:text-red-400">Merge PDF</Link>
-                <Link href="/split-pdf" className="hover:text-red-400">Split PDF</Link>
-                <Link href="/compress-pdf" className="hover:text-red-400">Compress PDF</Link>
+            <div className="hidden md:flex gap-4 lg:gap-6 items-center"> {/* Responsive gap */}
+                <Link href="/merge-pdf" className="hover:text-red-400 text-sm lg:text-base">Merge PDF</Link>
+                <Link href="/split-pdf" className="hover:text-red-400 text-sm lg:text-base">Split PDF</Link>
+                <Link href="/compress-pdf" className="hover:text-red-400 text-sm lg:text-base">Compress PDF</Link>
 
                 {/* Convert Dropdown */}
                 <div
@@ -114,17 +129,17 @@ export default function Navbar() {
                     onMouseEnter={() => setActiveDropdown("convert")}
                     onMouseLeave={() => setActiveDropdown(null)}
                 >
-                    <button className="hover:text-red-400 flex items-center gap-1">Convert PDF {activeDropdown === "convert" ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />} </button>
+                    <button className="hover:text-red-400 flex items-center gap-1 text-sm lg:text-base">Convert PDF {activeDropdown === "convert" ? <FaChevronUp size={10} className="lg:text-xs" /> : <FaChevronDown size={10} className="lg:text-xs" />} </button> {/* Responsive font size */}
                     {activeDropdown === "convert" && (
-                        <div className="absolute top-full mt-2 left-0 bg-gray-800 p-4 rounded-lg shadow-lg space-y-2 z-50 w-56">
+                        <div className="absolute top-full mt-2 left-0 bg-gray-800 p-3 sm:p-4 rounded-lg shadow-lg space-y-1 sm:space-y-2 z-50 w-48 sm:w-56"> {/* Responsive padding and width */}
                             {menus.convert.map((item, i) => (
                                 <Link
                                     key={i}
                                     href={item.link}
-                                    className="flex items-center gap-3 text-sm text-gray-200 hover:text-red-400"
-                                    onClick={() => setActiveDropdown(null)} // Close dropdown on item click
+                                    className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-200 hover:text-red-400"
+                                    onClick={() => setActiveDropdown(null)}
                                 >
-                                    <span className="text-lg">{item.icon}</span>
+                                    <span className="text-base sm:text-lg">{item.icon}</span> {/* Responsive icon size */}
                                     {item.title}
                                 </Link>
                             ))}
@@ -138,21 +153,21 @@ export default function Navbar() {
                     onMouseEnter={() => setActiveDropdown("allTools")}
                     onMouseLeave={() => setActiveDropdown(null)}
                 >
-                    <button className="hover:text-red-400 flex items-center gap-1">All PDF Tools {activeDropdown === "allTools" ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />} </button>
+                    <button className="hover:text-red-400 flex items-center gap-1 text-sm lg:text-base">All PDF Tools {activeDropdown === "allTools" ? <FaChevronUp size={10} className="lg:text-xs" /> : <FaChevronDown size={10} className="lg:text-xs" />} </button> {/* Responsive font size */}
                     {activeDropdown === "allTools" && (
-                        <div className="absolute top-full mt-2 left-0 bg-gray-800 p-6 rounded-lg shadow-lg grid grid-cols-2 gap-6 z-50 w-[600px]">
+                        <div className="absolute top-full mt-2 left-0 bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 z-50 w-[300px] sm:w-[600px]"> {/* Responsive columns and width */}
                             {menus.allTools.map((section, i) => (
                                 <div key={i}>
-                                    <h3 className="text-gray-300 font-semibold mb-3">{section.category}</h3>
-                                    <ul className="space-y-2 text-sm">
+                                    <h3 className="text-gray-300 font-semibold text-sm sm:text-base mb-2 sm:mb-3">{section.category}</h3> {/* Responsive font size */}
+                                    <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm"> {/* Responsive spacing */}
                                         {section.items.map((item, j) => (
                                             <li key={j}>
                                                 <Link
                                                     href={item.link}
-                                                    className="flex items-center gap-3 text-gray-200 hover:text-red-400"
-                                                    onClick={() => setActiveDropdown(null)} // Close dropdown on item click
+                                                    className="flex items-center gap-2 sm:gap-3 text-gray-200 hover:text-red-400"
+                                                    onClick={() => setActiveDropdown(null)}
                                                 >
-                                                    <span className="text-lg">{item.icon}</span>
+                                                    <span className="text-base sm:text-lg">{item.icon}</span> {/* Responsive icon size */}
                                                     {item.title}
                                                 </Link>
                                             </li>
@@ -167,29 +182,29 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             <div className={`md:hidden absolute top-full left-0 w-full bg-gray-900 shadow-lg pb-4 pt-2 transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'opacity-100 visible h-auto' : 'opacity-0 invisible h-0 overflow-hidden'}`}>
-                <div className="flex flex-col px-6 space-y-3">
-                    <Link href="/merge-pdf" className="block py-2 hover:text-red-400" onClick={() => setIsMobileMenuOpen(false)}>Merge PDF</Link>
-                    <Link href="/split-pdf" className="block py-2 hover:text-red-400" onClick={() => setIsMobileMenuOpen(false)}>Split PDF</Link>
-                    <Link href="/compress-pdf" className="block py-2 hover:text-red-400" onClick={() => setIsMobileMenuOpen(false)}>Compress PDF</Link>
+                <div className="flex flex-col px-4 sm:px-6 space-y-2 sm:space-y-3"> {/* Responsive padding and spacing */}
+                    <Link href="/merge-pdf" className="block py-1.5 sm:py-2 hover:text-red-400 text-sm sm:text-base" onClick={() => setIsMobileMenuOpen(false)}>Merge PDF</Link>
+                    <Link href="/split-pdf" className="block py-1.5 sm:py-2 hover:text-red-400 text-sm sm:text-base" onClick={() => setIsMobileMenuOpen(false)}>Split PDF</Link>
+                    <Link href="/compress-pdf" className="block py-1.5 sm:py-2 hover:text-red-400 text-sm sm:text-base" onClick={() => setIsMobileMenuOpen(false)}>Compress PDF</Link>
 
                     {/* Mobile Convert Dropdown */}
                     <div className="relative">
                         <button
                             onClick={() => setActiveMobileDropdown(activeMobileDropdown === "convert" ? null : "convert")}
-                            className="flex justify-between items-center w-full py-2 hover:text-red-400 focus:outline-none"
+                            className="flex justify-between items-center w-full py-1.5 sm:py-2 hover:text-red-400 focus:outline-none text-sm sm:text-base"
                         >
-                            Convert PDF {activeMobileDropdown === "convert" ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
+                            Convert PDF {activeMobileDropdown === "convert" ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
                         </button>
                         {activeMobileDropdown === "convert" && (
-                            <div className="pl-4 space-y-2 pt-2 bg-gray-800 rounded-md mt-1">
+                            <div className="pl-4 space-y-1 sm:space-y-2 pt-1.5 sm:pt-2 bg-gray-800 rounded-md mt-1"> {/* Responsive padding and spacing */}
                                 {menus.convert.map((item, i) => (
                                     <Link
                                         key={i}
                                         href={item.link}
-                                        className="flex items-center gap-3 text-sm text-gray-200 hover:text-red-400 py-1"
-                                        onClick={() => setIsMobileMenuOpen(false)} // Close both menus on click
+                                        className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-200 hover:text-red-400 py-1"
+                                        onClick={() => setIsMobileMenuOpen(false)}
                                     >
-                                        <span className="text-lg">{item.icon}</span>
+                                        <span className="text-base sm:text-lg">{item.icon}</span>
                                         {item.title}
                                     </Link>
                                 ))}
@@ -201,24 +216,24 @@ export default function Navbar() {
                     <div className="relative">
                         <button
                             onClick={() => setActiveMobileDropdown(activeMobileDropdown === "allTools" ? null : "allTools")}
-                            className="flex justify-between items-center w-full py-2 hover:text-red-400 focus:outline-none"
+                            className="flex justify-between items-center w-full py-1.5 sm:py-2 hover:text-red-400 focus:outline-none text-sm sm:text-base"
                         >
-                            All PDF Tools {activeMobileDropdown === "allTools" ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
+                            All PDF Tools {activeMobileDropdown === "allTools" ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
                         </button>
                         {activeMobileDropdown === "allTools" && (
-                            <div className="pl-4 space-y-2 pt-2 bg-gray-800 rounded-md mt-1">
+                            <div className="pl-4 space-y-1 sm:space-y-2 pt-1.5 sm:pt-2 bg-gray-800 rounded-md mt-1"> {/* Responsive padding and spacing */}
                                 {menus.allTools.map((section, i) => (
-                                    <div key={i} className="mb-3 last:mb-0">
-                                        <h3 className="text-gray-300 font-semibold mb-2">{section.category}</h3>
-                                        <ul className="space-y-1 text-sm">
+                                    <div key={i} className="mb-2 last:mb-0"> {/* Responsive margin */}
+                                        <h3 className="text-gray-300 font-semibold text-sm sm:text-base mb-1 sm:mb-2">{section.category}</h3> {/* Responsive font size and margin */}
+                                        <ul className="space-y-0.5 sm:space-y-1 text-xs sm:text-sm"> {/* Responsive spacing */}
                                             {section.items.map((item, j) => (
                                                 <li key={j}>
                                                     <Link
                                                         href={item.link}
-                                                        className="flex items-center gap-3 text-gray-200 hover:text-red-400 py-1"
-                                                        onClick={() => setIsMobileMenuOpen(false)} // Close both menus on click
+                                                        className="flex items-center gap-2 sm:gap-3 text-gray-200 hover:text-red-400 py-0.5 sm:py-1"
+                                                        onClick={() => setIsMobileMenuOpen(false)}
                                                     >
-                                                        <span className="text-lg">{item.icon}</span>
+                                                        <span className="text-base sm:text-lg">{item.icon}</span>
                                                         {item.title}
                                                     </Link>
                                                 </li>
