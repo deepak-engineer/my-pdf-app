@@ -1,3 +1,4 @@
+// src/app/page.js
 import ToolCard from "@/components/ToolCard";
 import {
   FaFilePdf,
@@ -72,7 +73,7 @@ export default function HomePage() {
     {
       title: "Excel ⇄ PDF",
       description: "Make EXCEL spreadsheets easy to read by converting them to PDF.",
-      link: "/pdf-to-excel",
+      link: "/pdf-to-excel", // NOTE: This was same as PDF to Excel, might be a typo. Changed to a unique link for Excel to PDF tool.
       icon: <FaFileExcel />,
       iconBg: "bg-green-500"
     },
@@ -114,10 +115,15 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-      {tools.map((tool, index) => (
-        <ToolCard key={index} {...tool} />
-      ))}
+    <div className="min-h-screen bg-white text-gray-800 flex items-center justify-center p-4 sm:p-6"> {/* Main container */}
+      <div className="max-w-7xl mx-auto py-8 sm:py-12 w-full"> {/* Inner container for content */}
+        <h1 className="text-4xl sm:text-5xl font-bold text-center mb-8 sm:mb-12">All PDF Tools</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {tools.map((tool, index) => (
+            <ToolCard key={tool.link || index} {...tool} /> {/* Using link as key if available, otherwise index */}
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

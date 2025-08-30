@@ -2,37 +2,30 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PDFDocument } from "pdf-lib";
-import dynamic from "next/dynamic"; // Iski ab yahan zaroorat nahi kyunki Document/Page PdfToolUploader mein dynamic hain.
+// dynamic import of Document/Page NO LONGER NEEDED HERE
+// import dynamic from "next/dynamic";
 import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 // Import your custom hook
 import { useCloudPickers } from '@/hooks/useCloudPickers';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 // Import the reusable component
 import PdfToolUploader from '@/components/PdfToolUploader';
-
-// Dynamically import react-pdf components inside this reusable component
-// This ensures that Document and Page are only loaded on the client-side
-const Document = dynamic(
-  () => import("react-pdf").then((mod) => mod.Document),
-  { ssr: false }
-);
-const Page = dynamic(
-  () => import("react-pdf").then((mod) => mod.Page),
-  { ssr: false }
-);
+// Import PdfPreviewThumbnail for displaying previews in toolSpecificContent
+import PdfPreviewThumbnail from '@/components/PdfPreviewThumbnail'; // <-- NEW IMPORT (Already there)
 
 
 export default function SplitPDF() {
   const [localFiles, setLocalFiles] = useState([]);
-  const [splitPdfUrls, setSplitPdfUrls] = useState([]); // Array to hold URLs of split PDFs
-  const [pagesToSplit, setPagesToSplit] = useState(""); // Input for page ranges (e.g., "1-3, 5, 8-10")
-  const [numPagesInPdf, setNumPagesInPdf] = useState(0); // To store total pages of the uploaded PDF
+  const [splitPdfUrls, setSplitPdfUrls] = useState([]);
+  const [numPagesInPdf, setNumPagesInPdf] = useState(0);
+  
+  const [pagesToSplit, setPagesToSplit] = useLocalStorage('splitPdfPagesToSplit', ""); 
   
   const fileInputRef = useRef(null); 
 
 
-  // Hook for cloud pickers
   const {
     isPickerLoading,
     pickedCloudFiles,
@@ -45,29 +38,30 @@ export default function SplitPDF() {
 
   const allFiles = [...localFiles, ...pickedCloudFiles];
 
-  // Ref to track previous allFiles length to detect a change for clearing splitPdfUrls
   const prevAllFilesLengthRef = useRef(allFiles.length);
 
-  // --- MODIFIED useEffect for managing splitPdfUrls and clearPickedCloudFiles ---
+  // --- PDF.JS WORKER CONFIG ---
+  // YE EFFECT BLOCK AB PdfPreviewThumbnail.js MEIN HAI, YAHAN ZAROORAT NAHI
+  // useEffect(() => { /* ... */ }, []);
+
+
   useEffect(() => {
     if (allFiles.length !== prevAllFilesLengthRef.current) {
-      // Clear split PDFs if input files change
       if (splitPdfUrls.length > 0) {
         setSplitPdfUrls([]);
       }
       
-      // Reset numPagesInPdf if files are cleared or changed
       setNumPagesInPdf(0);
-      setPagesToSplit(""); // Also clear page input
+      setPagesToSplit(""); 
 
       if (prevAllFilesLengthRef.current > 0 && allFiles.length === 0) {
         clearPickedCloudFiles();
       }
     }
     prevAllFilesLengthRef.current = allFiles.length;
-  }, [allFiles.length, splitPdfUrls, clearPickedCloudFiles]);
+  }, [allFiles.length, splitPdfUrls, clearPickedCloudFiles, setPagesToSplit]);
 
-  // Effect to get total pages of uploaded PDF
+
   useEffect(() => {
     const loadPdfInfo = async () => {
       if (allFiles.length === 1) {
@@ -81,14 +75,13 @@ export default function SplitPDF() {
         }
       } else {
         setNumPagesInPdf(0);
-        setPagesToSplit(""); // Clear page input if no file or multiple files
+        setPagesToSplit(""); 
       }
     };
     loadPdfInfo();
-  }, [allFiles]); // Run when allFiles changes
+  }, [allFiles, setPagesToSplit]);
 
 
-  // --- File Handling Functions ---
   const removeFile = useCallback((indexToRemove) => {
     if (indexToRemove < localFiles.length) {
       setLocalFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
@@ -96,11 +89,10 @@ export default function SplitPDF() {
       const cloudFileIndex = indexToRemove - localFiles.length;
       setPickedCloudFiles(prevFiles => prevFiles.filter((_, index) => index !== cloudFileIndex));
     }
-    // Clear split PDFs when a file is removed
     setSplitPdfUrls([]);
-    setNumPagesInPdf(0); // Reset page count
-    setPagesToSplit(""); // Clear page input
-  }, [localFiles, pickedCloudFiles, setPickedCloudFiles]);
+    setNumPagesInPdf(0);
+    setPagesToSplit(""); 
+  }, [localFiles, pickedCloudFiles, setPickedCloudFiles, setPagesToSplit]);
 
   const handleSplit = async () => {
     if (allFiles.length === 0) {
@@ -117,14 +109,13 @@ export default function SplitPDF() {
     }
 
     const inputPdfFile = allFiles[0];
-    setSplitPdfUrls([]); // Clear previous split results
+    setSplitPdfUrls([]);
 
     try {
       const arrayBuffer = await inputPdfFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const numPages = pdfDoc.getPageCount();
 
-      // Parse page ranges (e.g., "1-3, 5, 8-10")
       const pagesToExtractGroups = parsePageRanges(pagesToSplit, numPages);
 
       if (pagesToExtractGroups.length === 0) {
@@ -136,7 +127,7 @@ export default function SplitPDF() {
 
       for (const pageNumbers of pagesToExtractGroups) {
         const newPdf = await PDFDocument.create();
-        const copiedPages = await newPdf.copyPages(pdfDoc, pageNumbers.map(p => p - 1)); // Adjust to 0-indexed
+        const copiedPages = await newPdf.copyPages(pdfDoc, pageNumbers.map(p => p - 1));
 
         copiedPages.forEach((page) => newPdf.addPage(page));
 
@@ -158,7 +149,6 @@ export default function SplitPDF() {
     }
   };
 
-  // Helper function to parse page ranges
   const parsePageRanges = (rangeString, totalPages) => {
     const pages = [];
     const parts = rangeString.split(',').map(part => part.trim()).filter(Boolean);
@@ -182,7 +172,6 @@ export default function SplitPDF() {
             if (!pages.includes(pageNum)) pages.push(pageNum);
         }
     }
-    // Sort and remove duplicates
     const sortedUniquePages = [...new Set(pages)].sort((a,b) => a - b);
     const contiguousPageGroups = [];
     if (sortedUniquePages.length === 0) return [];
@@ -196,7 +185,7 @@ export default function SplitPDF() {
             currentGroup = [sortedUniquePages[i]];
         }
     }
-    contiguousPageGroups.push(currentGroup); // Add the last group
+    contiguousPageGroups.push(currentGroup);
 
     return contiguousPageGroups;
   };
@@ -205,17 +194,16 @@ export default function SplitPDF() {
   const clearAllFiles = useCallback(() => {
     setLocalFiles([]);
     clearPickedCloudFiles();
-    setSplitPdfUrls([]); // Clear split URLs as well
-    setPagesToSplit(""); // Clear page input
-    setNumPagesInPdf(0); // Reset page count
-  }, [clearPickedCloudFiles]);
+    setSplitPdfUrls([]);
+    setPagesToSplit(""); 
+    setNumPagesInPdf(0);
+  }, [clearPickedCloudFiles, setPagesToSplit]);
 
   return (
     <PdfToolUploader
       title="Split PDF"
       subtitle="Separate one page or a whole set for easy conversion into independent PDF files."
       
-      // File management props
       localFiles={localFiles}
       setLocalFiles={setLocalFiles}
       allFiles={allFiles}
@@ -223,81 +211,85 @@ export default function SplitPDF() {
       clearAllFiles={clearAllFiles}
       fileInputRef={fileInputRef}
 
-      // Cloud picker props
       isPickerLoading={isPickerLoading}
       cloudPickerError={cloudPickerError}
       openGoogleDrivePicker={openGoogleDrivePicker}
       openDropboxChooser={openDropboxChooser}
       
-      // Tool-specific action buttons
       actionButtons={
         allFiles.length === 1 && numPagesInPdf > 0 && ( // Only show action buttons if one PDF is uploaded and pages are known
-          <>
-            <div className="flex flex-col items-center gap-2">
-              <label htmlFor="pagesToSplit" className="text-gray-700 font-medium">Pages to Split (e.g., 1-3, 5):</label>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6 w-full"> {/* Responsive layout for action buttons */}
+            <div className="flex flex-col items-center gap-2 w-full sm:w-auto"> {/* Input label and field */}
+              <label htmlFor="pagesToSplit" className="text-gray-700 font-medium text-base text-center sm:text-left">Pages to Split (e.g., 1-3, 5):</label>
               <input
                 type="text"
                 id="pagesToSplit"
                 value={pagesToSplit}
                 onChange={(e) => setPagesToSplit(e.target.value)}
                 placeholder={`e.g., 1-${numPagesInPdf} or 1-3, 5`}
-                className="p-2 border border-gray-300 rounded-md w-64 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="p-2 border border-gray-300 rounded-md w-full sm:w-64 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" // w-full on small screens
               />
             </div>
-            <button
-              onClick={handleSplit}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md"
-            >
-              Split PDF
-            </button>
-            <button
-              onClick={clearAllFiles}
-              className="bg-gray-300 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-400 transition-colors duration-200 font-semibold shadow-md"
-            >
-              Clear All
-            </button>
-          </>
+            <div className="flex gap-2 sm:gap-4 mt-4 sm:mt-0"> {/* Buttons group */}
+              <button
+                onClick={handleSplit}
+                className="bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-semibold shadow-md text-sm sm:text-base flex-shrink-0" // Responsive padding/font
+              >
+                Split PDF
+              </button>
+              <button
+                onClick={clearAllFiles}
+                className="bg-gray-300 text-gray-800 px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-gray-400 transition-colors duration-200 font-semibold shadow-md text-sm sm:text-base flex-shrink-0" // Responsive padding/font
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
         )
       }
-      // Tool-specific content (e.g., split PDF previews)
       toolSpecificContent={
         splitPdfUrls.length > 0 && (
           <div className="mt-8 p-4 border rounded-lg bg-yellow-50 shadow-inner">
-            <h2 className="font-bold text-xl text-yellow-700 mb-3">✅ Your PDF has been split!</h2>
-            <div className="flex flex-wrap justify-center gap-6"> {/* Changed to flex-wrap for better layout */}
+            <h2 className="font-bold text-xl sm:text-2xl text-yellow-700 mb-3">✅ Your PDF has been split!</h2>
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6"> {/* Responsive gap */}
                 {splitPdfUrls.map((splitFile, idx) => (
-                    <div key={idx} className="border p-3 rounded-lg shadow-sm flex flex-col items-center bg-white">
-                        <p className="text-gray-800 font-semibold mb-2">Range {idx + 1}</p> {/* Range label */}
-                        <div className="flex items-center gap-2 mb-2">
-                            {/* Preview for the first page of the split range */}
-                            {allFiles[0] && Document && Page && (
-                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                                    <Document file={allFiles[0]} className="w-full h-full">
-                                        <Page pageNumber={splitFile.pages[0]} width={100} renderTextLayer={false} renderAnnotationLayer={false} />
-                                    </Document>
-                                    <p className="text-xs text-gray-500 text-center mt-1">{splitFile.pages[0]}</p>
+                    <div key={idx} className="border p-3 sm:p-4 rounded-lg shadow-sm flex flex-col items-center bg-white w-full max-w-[200px] sm:w-auto"> {/* Responsive width */}
+                        <p className="text-gray-800 font-semibold text-base sm:text-lg mb-2">Range {idx + 1}</p> {/* Responsive font size */}
+                        <div className="flex items-center justify-center gap-2 mb-2 w-full">
+                            {allFiles[0] && (
+                                <div className="w-20 h-28 sm:w-24 sm:h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                                    <PdfPreviewThumbnail file={allFiles[0]} pageNumber={splitFile.pages[0]} />
                                 </div>
                             )}
 
-                            {/* Ellipsis if more than two pages in range */}
-                            {splitFile.pages.length > 2 && <span className="text-xl font-bold text-gray-500 mx-1">...</span>}
+                            {splitFile.pages.length > 2 && <span className="text-lg sm:text-xl font-bold text-gray-500 mx-1">...</span>} {/* Responsive font size */}
 
-                            {/* Preview for the last page of the split range (if different from first) */}
-                            {splitFile.pages.length > 1 && allFiles[0] && Document && Page && (
-                                <div className="w-24 h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                                    <Document file={allFiles[0]} className="w-full h-full">
-                                        <Page pageNumber={splitFile.pages[splitFile.pages.length - 1]} width={100} renderTextLayer={false} renderAnnotationLayer={false} />
-                                    </Document>
-                                    <p className="text-xs text-gray-500 text-center mt-1">{splitFile.pages[splitFile.pages.length - 1]}</p>
+                            {splitFile.pages.length > 1 && allFiles[0] && (
+                                <div className="w-20 h-28 sm:w-24 sm:h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                                    <PdfPreviewThumbnail file={allFiles[0]} pageNumber={splitFile.pages[splitFile.pages.length - 1]} />
                                 </div>
                             )}
                         </div>
-
-                        <p className="text-sm text-gray-600 text-center truncate w-full mb-2">{splitFile.name}</p>
+                        <div className="flex justify-center gap-2 sm:gap-4 text-xs text-gray-500 mt-1"> {/* Responsive gap/font */}
+                          {allFiles[0] && (
+                            <>
+                              <span>{splitFile.pages[0]}</span>
+                              {splitFile.pages.length > 1 && splitFile.pages.length <= 2 ? (
+                                <span>- {splitFile.pages[splitFile.pages.length - 1]}</span>
+                              ) : splitFile.pages.length > 2 ? (
+                                <>
+                                  <span>...</span>
+                                  <span>{splitFile.pages[splitFile.pages.length - 1]}</span>
+                                </>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 text-center truncate w-full mb-2 mt-2">{splitFile.name}</p>
                         <a
                             href={splitFile.url}
                             download={splitFile.name}
-                            className="inline-block bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition text-sm"
+                            className="inline-block bg-yellow-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded hover:bg-yellow-700 transition text-xs sm:text-sm" // Responsive padding/font
                         >
                             ⬇ Download
                         </a>

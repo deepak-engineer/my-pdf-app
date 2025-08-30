@@ -19,15 +19,19 @@ export default function CloudUploadButton({ service, onClick, isLoading, classNa
   return (
     <button
       onClick={onClick}
-      className={`bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-sm flex items-center justify-center transition-colors duration-200 ${className || ''}`}
+      // --- CHANGES START HERE ---
+      className={`bg-red-500 hover:bg-red-600 text-white p-2.5 sm:p-3 rounded-full shadow-sm flex items-center justify-center transition-colors duration-200 ${className || ''}`}
       title={title || `Upload from ${service.replace('Fa', '')}`}
       disabled={isLoading}
     >
       {isLoading ? (
-        <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+        // Spinner size ko bhi responsive banaya hai
+        <span className="animate-spin h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent rounded-full"></span>
       ) : (
-        <IconComponent size={20} />
+        // Icon size ko bhi responsive banaya hai
+        <IconComponent size={18} className="sm:text-xl" /> // text-xl is equivalent to size 20
       )}
+      {/* --- CHANGES END HERE --- */}
     </button>
   );
 }
