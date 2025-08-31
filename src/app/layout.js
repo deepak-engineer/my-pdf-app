@@ -10,7 +10,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-black text-white" suppressHydrationWarning={true}> {/* <-- Yahan add kiya hai */}
+      <body className="bg-white text-white" suppressHydrationWarning={true}>
         <Navbar />
         <main className="p-6">{children}</main>
       </body>

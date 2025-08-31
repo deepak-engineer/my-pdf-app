@@ -1,18 +1,17 @@
-// src/app/split-pdf/page.js
 "use client";
+// src/app/split-pdf/page.js
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PDFDocument } from "pdf-lib";
-// dynamic import of Document/Page NO LONGER NEEDED HERE
-// import dynamic from "next/dynamic";
 import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 // Import your custom hook
 import { useCloudPickers } from '@/hooks/useCloudPickers';
+// Removed useLocalStorage import, as per your request
+// import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 // Import the reusable component
 import PdfToolUploader from '@/components/PdfToolUploader';
-// Import PdfPreviewThumbnail for displaying previews in toolSpecificContent
-import PdfPreviewThumbnail from '@/components/PdfPreviewThumbnail'; // <-- NEW IMPORT (Already there)
+import PdfPreviewThumbnail from '@/components/PdfPreviewThumbnail';
 
 
 export default function SplitPDF() {
@@ -20,8 +19,10 @@ export default function SplitPDF() {
   const [splitPdfUrls, setSplitPdfUrls] = useState([]);
   const [numPagesInPdf, setNumPagesInPdf] = useState(0);
   
-  const [pagesToSplit, setPagesToSplit] = useLocalStorage('splitPdfPagesToSplit', ""); 
+  // pagesToSplit now uses useState without localStorage
+  const [pagesToSplit, setPagesToSplit] = useState(""); 
   
+  // fileInputRef ab bhi yahan define hoga aur PdfToolUploader ko pass kiya jayega
   const fileInputRef = useRef(null); 
 
 
@@ -40,7 +41,7 @@ export default function SplitPDF() {
   const prevAllFilesLengthRef = useRef(allFiles.length);
 
   // --- PDF.JS WORKER CONFIG ---
-  // YE EFFECT BLOCK AB PdfPreviewThumbnail.js MEIN HAI, YAHAN ZAROORAT NAHI
+  // This is handled in PdfPreviewThumbnail.js now, so no need here.
   // useEffect(() => { /* ... */ }, []);
 
 
@@ -58,7 +59,7 @@ export default function SplitPDF() {
       }
     }
     prevAllFilesLengthRef.current = allFiles.length;
-  }, [allFiles.length, splitPdfUrls, clearPickedCloudFiles, setPagesToSplit]);
+  }, [allFiles.length, splitPdfUrls, clearPickedCloudFiles]);
 
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function SplitPDF() {
       }
     };
     loadPdfInfo();
-  }, [allFiles, setPagesToSplit]);
+  }, [allFiles]);
 
 
   const removeFile = useCallback((indexToRemove) => {
@@ -91,7 +92,7 @@ export default function SplitPDF() {
     setSplitPdfUrls([]);
     setNumPagesInPdf(0);
     setPagesToSplit(""); 
-  }, [localFiles, pickedCloudFiles, setPickedCloudFiles, setPagesToSplit]);
+  }, [localFiles, pickedCloudFiles, setPickedCloudFiles]);
 
   const handleSplit = async () => {
     if (allFiles.length === 0) {
@@ -108,7 +109,7 @@ export default function SplitPDF() {
     }
 
     const inputPdfFile = allFiles[0];
-    setSplitPdfUrls([]);
+    setSplitPdfUrls([]); // Clear previous split results
 
     try {
       const arrayBuffer = await inputPdfFile.arrayBuffer();
@@ -193,10 +194,10 @@ export default function SplitPDF() {
   const clearAllFiles = useCallback(() => {
     setLocalFiles([]);
     clearPickedCloudFiles();
-    setSplitPdfUrls([]);
-    setPagesToSplit(""); 
-    setNumPagesInPdf(0);
-  }, [clearPickedCloudFiles, setPagesToSplit]);
+    setSplitPdfUrls([]); // Clear split URLs as well
+    setPagesToSplit(""); // Clear page input
+    setNumPagesInPdf(0); // Reset page count
+  }, [clearPickedCloudFiles]);
 
   return (
     <PdfToolUploader
@@ -246,6 +247,7 @@ export default function SplitPDF() {
           </div>
         )
       }
+      // Tool-specific content (e.g., split PDF previews)
       toolSpecificContent={
         splitPdfUrls.length > 0 && (
           <div className="mt-8 p-4 border rounded-lg bg-yellow-50 shadow-inner">
@@ -255,7 +257,7 @@ export default function SplitPDF() {
                     <div key={idx} className="border p-3 sm:p-4 rounded-lg shadow-sm flex flex-col items-center bg-white w-full max-w-[200px] sm:w-auto"> {/* Responsive width */}
                         <p className="text-gray-800 font-semibold text-base sm:text-lg mb-2">Range {idx + 1}</p> {/* Responsive font size */}
                         <div className="flex items-center justify-center gap-2 mb-2 w-full">
-                            {allFiles[0] && (
+                            {allFiles[0] && ( // allFiles[0] ensure input file is available
                                 <div className="w-20 h-28 sm:w-24 sm:h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                                     <PdfPreviewThumbnail file={allFiles[0]} pageNumber={splitFile.pages[0]} />
                                 </div>
@@ -263,14 +265,14 @@ export default function SplitPDF() {
 
                             {splitFile.pages.length > 2 && <span className="text-lg sm:text-xl font-bold text-gray-500 mx-1">...</span>} {/* Responsive font size */}
 
-                            {splitFile.pages.length > 1 && allFiles[0] && (
+                            {splitFile.pages.length > 1 && allFiles[0] && ( // allFiles[0] ensure input file is available
                                 <div className="w-20 h-28 sm:w-24 sm:h-32 border rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                                     <PdfPreviewThumbnail file={allFiles[0]} pageNumber={splitFile.pages[splitFile.pages.length - 1]} />
                                 </div>
                             )}
                         </div>
                         <div className="flex justify-center gap-2 sm:gap-4 text-xs text-gray-500 mt-1"> {/* Responsive gap/font */}
-                          {allFiles[0] && (
+                          {allFiles[0] && ( // allFiles[0] ensure input file is available
                             <>
                               <span>{splitFile.pages[0]}</span>
                               {splitFile.pages.length > 1 && splitFile.pages.length <= 2 ? (
