@@ -16,25 +16,22 @@ import PdfPreviewThumbnail from './PdfPreviewThumbnail';
 export default function PdfToolUploader({
   title,
   subtitle,
-  // Props for file management logic from the parent component
   localFiles,
-  setLocalFiles = () => {}, // Default to an empty function
-  // --- IMPORTANT: CONFIRM YE DEFAULT VALUE SET HAI ---
-  allFiles = [], // Default to an empty array
-  // --- END IMPORTANT ---
+  setLocalFiles = () => {},
+  allFiles = [],
   removeFile,
   clearAllFiles,
   fileInputRef,
-  
-  // Props for cloud picker integration
   isPickerLoading,
   cloudPickerError,
   openGoogleDrivePicker,
   openDropboxChooser,
-
-  // Tool-specific UI elements (passed as children/props)
   actionButtons,
-  toolSpecificContent
+  toolSpecificContent,
+  // --- IMPORTANT CHANGE: Naye props add kiye hain ---
+  selectButtonText = "Select files", // Default text
+  acceptedFileTypes = "application/pdf", // Default accept PDF
+  // --- END IMPORTANT CHANGE ---
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
@@ -53,12 +50,21 @@ export default function PdfToolUploader({
       }
     };
     configurePdfJsWorker();
-  }, []); // Empty dependency array: runs once on mount of PdfToolUploader
+  }, []);
 
 
   // --- File Handling Functions ---
   const handleLocalFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files).filter(file => file.type === 'application/pdf');
+    // Filter files based on acceptedFileTypes prop
+    const selectedFiles = Array.from(e.target.files).filter(file => {
+        if (acceptedFileTypes === "application/auto") { // 'application/auto' means accept all for demo
+            return true;
+        }
+        // Check if the selected file's MIME type matches any of the accepted types
+        // acceptedFileTypes can be "application/pdf" or "application/pdf,image/jpeg" etc.
+        return acceptedFileTypes.split(',').some(acceptedType => file.type === acceptedType.trim());
+    });
+
     if (selectedFiles.length > 0) {
       setLocalFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
     }
@@ -84,7 +90,14 @@ export default function PdfToolUploader({
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+    // Filter files based on acceptedFileTypes prop
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(file => {
+        if (acceptedFileTypes === "application/auto") {
+            return true;
+        }
+        return acceptedFileTypes.split(',').some(acceptedType => file.type === acceptedType.trim());
+    });
+
     if (droppedFiles.length > 0) {
       setLocalFiles((prevFiles) => [...prevFiles, ...droppedFiles]);
     }
@@ -106,7 +119,9 @@ export default function PdfToolUploader({
         {/* Hidden file input element for local files */}
         <input
           type="file"
-          accept="application/pdf"
+          // --- IMPORTANT CHANGE: accept attribute dynamic kiya hai ---
+          accept={acceptedFileTypes}
+          // --- END IMPORTANT CHANGE ---
           multiple
           onChange={handleLocalFileChange}
           ref={fileInputRef}
@@ -114,7 +129,6 @@ export default function PdfToolUploader({
         />
 
         {/* --- Floating Action Buttons (FAB) --- */}
-        {/* allFiles ab guaranteed ek array hai, so .length is safe */}
         {allFiles.length > 0 && (
           <div
             className="fixed right-12 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50"
@@ -124,7 +138,7 @@ export default function PdfToolUploader({
             <AddMoreFilesButton
               onClick={handleButtonClick}
               fileCount={allFiles.length}
-              title="Add more PDF files from computer"
+              title={`Add more ${selectButtonText.replace('Select ', '').toLowerCase()}`}
             />
             <div className={`flex flex-col gap-3 transition-opacity duration-300 ${isFabMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
               <BrowseComputerButton
@@ -145,7 +159,6 @@ export default function PdfToolUploader({
         )}
 
         {/* --- Main Content Area --- */}
-        {/* allFiles ab guaranteed ek array hai, so .length is safe */}
         {allFiles.length === 0 ? (
           <div
             className={`flex flex-col items-center justify-center p-12 border-2 ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300'} rounded-lg transition-all duration-200`}
@@ -158,7 +171,9 @@ export default function PdfToolUploader({
                 onClick={handleButtonClick}
                 className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-8 rounded-lg shadow-md transition-colors duration-200 text-lg flex-shrink-0"
               >
-                Select PDF files
+                {/* --- IMPORTANT CHANGE: Button text dynamic kiya hai --- */}
+                {selectButtonText}
+                {/* --- END IMPORTANT CHANGE --- */}
               </button>
               <div className="flex flex-row sm:flex-col gap-2">
                 <CloudUploadButton
@@ -173,11 +188,11 @@ export default function PdfToolUploader({
                 />
               </div>
             </div>
-            <p className="text-gray-500 text-sm">or drop PDFs here</p>
+            <p className="text-gray-500 text-sm">or drop {selectButtonText.replace('Select ', '').toLowerCase()} here</p> {/* Drop text bhi dynamic */}
           </div>
         ) : (
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Selected PDFs ({allFiles.length})</h2>
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Selected files ({allFiles.length})</h2> {/* Text change kiya */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-60 overflow-y-auto p-2 border rounded-md bg-gray-50">
               {allFiles.map((file, idx) => (
                 <div
@@ -192,9 +207,20 @@ export default function PdfToolUploader({
                     <FaTimes size={10} />
                   </button>
                   <div className="mb-2 w-24 h-32 flex items-center justify-center border rounded-md overflow-hidden bg-gray-100">
-                    <PdfPreviewThumbnail file={file} />
+                    {/* Yahan file type ke hisab se preview change kar sakte hain,
+                        lekin abhi PdfPreviewThumbnail sirf PDF ke liye hai.
+                        Agar non-PDF file upload hogi, toh fallback icon dikhega. */}
+                    {file.type === 'application/pdf' ? (
+                        <PdfPreviewThumbnail file={file} />
+                    ) : (
+                        <FaFilePdf className="text-red-400 text-4xl" /> // Fallback icon for non-PDF
+                    )}
                   </div>
-                  <FaFilePdf className="text-red-600 text-xl mb-1" />
+                  {/* File type ke hisab se icon bhi change kar sakte hain */}
+                  {file.type === 'application/pdf' && <FaFilePdf className="text-red-600 text-xl mb-1" />}
+                  {file.type.includes('word') && <FaFileWord className="text-blue-600 text-xl mb-1" />}
+                  {file.type.includes('powerpoint') && <FaFilePowerpoint className="text-orange-600 text-xl mb-1" />}
+                  {/* Aur file types ke liye icons add kar sakte hain */}
                   <p className="text-sm text-gray-600 text-center truncate w-28">
                     {file.name}
                   </p>

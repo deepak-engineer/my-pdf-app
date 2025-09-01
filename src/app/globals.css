@@ -1,1 +1,20 @@
 @import "tailwindcss";
+/* public/fonts/NotoSans-Regular.ttf ke liye */
+@font-face {
+  font-family: 'NotoSans';
+  src: url('/fonts/NotoSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* public/fonts/NotoSansDevanagari-Regular.ttf ke liye */
+@font-face {
+  font-family: 'NotoSansDevanagari';
+  src: url('/fonts/NotoSansDevanagari-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Ensure karein ki aapki main CSS file mein yeh rules hain taki textarea unhein use kar sake */
